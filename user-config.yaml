@@ -1,0 +1,15 @@
+---
+
+server:
+  hostname: localhost
+  port: 12191
+  token: someuniqueauthstringtoconnecttouser
+rest:
+  root: /user
+  endpoints:
+    - endpoint: get
+      method: get
+    - endpoint: auth
+      method: post
+    - endpoint: token
+      method: post
