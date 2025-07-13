@@ -21,6 +21,8 @@ func (s *Service) InitializeRest(config restlib.RestInterServiceConfig) error {
 	if err := s.rest.Init(); err != nil {
 		return err
 	}
+
+	log.Infof("Registering handlers")
 	if err := s.rest.RegisterHandler("/auth/credentials", "POST", s.HandleAuthCredentialsRequest); err != nil {
 		log.Warnf("Failed to register handler for /auth/credentials: %v", err)
 	}
@@ -30,6 +32,11 @@ func (s *Service) InitializeRest(config restlib.RestInterServiceConfig) error {
 	if err := s.rest.RegisterHandler("/auth/server", "POST", s.HandleAuthServerRequest); err != nil {
 		log.Warnf("Failed to register handler for /auth/server: %v", err)
 	}
+
+	for _, key := range s.rest.GetRegisteredHandlerKeys() {
+		log.Infof("Registered handler: %s", key)
+	}
+
 	return nil
 }
 
@@ -60,13 +67,16 @@ func (s *Service) Start() error {
 }
 
 func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
+	log.Info("HandleAuthCredentialsRequest")
 	return nil, nil
 }
 
 func (s *Service) HandleAuthPlatformRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
+	log.Info("HandleAuthPlatformRequest")
 	return nil, nil
 }
 
 func (s *Service) HandleAuthServerRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
+	log.Info("HandleAuthServerRequest")
 	return nil, nil
 }
