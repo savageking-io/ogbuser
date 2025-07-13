@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package user;
+option go_package = "github.com/savageking-io/ogbuser/proto";
+
+service UserService {
+  rpc AuthenticateUserCredentials(AuthUserCredentialsRequest) returns (AuthResponse);
+  rpc AuthenticatePlatform(AuthPlatformRequest) returns (AuthResponse);
+  rpc AuthenticateServer(AuthServerRequest) returns (AuthResponse);
+}
+
+message AuthResponse {
+  int32 code = 1;
+  string error = 2;
+  string token = 3;
+}
+
+message AuthUserCredentialsRequest {
+  string username = 1;
+  string password = 2;
+};
+
+message AuthPlatformRequest {
+  string platform = 1;
+  string auth_token = 2;
+}
+
+message AuthServerRequest {
+  string auth_token = 1;
+}

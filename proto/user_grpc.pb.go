@@ -8,7 +8,6 @@ package proto
 
 import (
 	context "context"
-	proto "github.com/savageking-io/onlinegamebase/rest/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,16 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_AuthService_FullMethodName     = "/user.UserService/AuthService"
-	UserService_RequestRESTData_FullMethodName = "/user.UserService/RequestRESTData"
+	UserService_AuthenticateUserCredentials_FullMethodName = "/user.UserService/AuthenticateUserCredentials"
+	UserService_AuthenticatePlatform_FullMethodName        = "/user.UserService/AuthenticatePlatform"
+	UserService_AuthenticateServer_FullMethodName          = "/user.UserService/AuthenticateServer"
 )
 
 // UserServiceClient is the client API for UserService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
-	AuthService(ctx context.Context, in *proto.AuthenticateServiceRequest, opts ...grpc.CallOption) (*proto.AuthenticateServiceResponse, error)
-	RequestRESTData(ctx context.Context, in *proto.RestDataRequest, opts ...grpc.CallOption) (*proto.RestDataResponse, error)
+	AuthenticateUserCredentials(ctx context.Context, in *AuthUserCredentialsRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	AuthenticatePlatform(ctx context.Context, in *AuthPlatformRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	AuthenticateServer(ctx context.Context, in *AuthServerRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 }
 
 type userServiceClient struct {
@@ -40,20 +41,30 @@ func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
 	return &userServiceClient{cc}
 }
 
-func (c *userServiceClient) AuthService(ctx context.Context, in *proto.AuthenticateServiceRequest, opts ...grpc.CallOption) (*proto.AuthenticateServiceResponse, error) {
+func (c *userServiceClient) AuthenticateUserCredentials(ctx context.Context, in *AuthUserCredentialsRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.AuthenticateServiceResponse)
-	err := c.cc.Invoke(ctx, UserService_AuthService_FullMethodName, in, out, cOpts...)
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, UserService_AuthenticateUserCredentials_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServiceClient) RequestRESTData(ctx context.Context, in *proto.RestDataRequest, opts ...grpc.CallOption) (*proto.RestDataResponse, error) {
+func (c *userServiceClient) AuthenticatePlatform(ctx context.Context, in *AuthPlatformRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(proto.RestDataResponse)
-	err := c.cc.Invoke(ctx, UserService_RequestRESTData_FullMethodName, in, out, cOpts...)
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, UserService_AuthenticatePlatform_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) AuthenticateServer(ctx context.Context, in *AuthServerRequest, opts ...grpc.CallOption) (*AuthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AuthResponse)
+	err := c.cc.Invoke(ctx, UserService_AuthenticateServer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +75,9 @@ func (c *userServiceClient) RequestRESTData(ctx context.Context, in *proto.RestD
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
 type UserServiceServer interface {
-	AuthService(context.Context, *proto.AuthenticateServiceRequest) (*proto.AuthenticateServiceResponse, error)
-	RequestRESTData(context.Context, *proto.RestDataRequest) (*proto.RestDataResponse, error)
+	AuthenticateUserCredentials(context.Context, *AuthUserCredentialsRequest) (*AuthResponse, error)
+	AuthenticatePlatform(context.Context, *AuthPlatformRequest) (*AuthResponse, error)
+	AuthenticateServer(context.Context, *AuthServerRequest) (*AuthResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -76,11 +88,14 @@ type UserServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedUserServiceServer struct{}
 
-func (UnimplementedUserServiceServer) AuthService(context.Context, *proto.AuthenticateServiceRequest) (*proto.AuthenticateServiceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AuthService not implemented")
+func (UnimplementedUserServiceServer) AuthenticateUserCredentials(context.Context, *AuthUserCredentialsRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateUserCredentials not implemented")
 }
-func (UnimplementedUserServiceServer) RequestRESTData(context.Context, *proto.RestDataRequest) (*proto.RestDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RequestRESTData not implemented")
+func (UnimplementedUserServiceServer) AuthenticatePlatform(context.Context, *AuthPlatformRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticatePlatform not implemented")
+}
+func (UnimplementedUserServiceServer) AuthenticateServer(context.Context, *AuthServerRequest) (*AuthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateServer not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -103,38 +118,56 @@ func RegisterUserServiceServer(s grpc.ServiceRegistrar, srv UserServiceServer) {
 	s.RegisterService(&UserService_ServiceDesc, srv)
 }
 
-func _UserService_AuthService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.AuthenticateServiceRequest)
+func _UserService_AuthenticateUserCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthUserCredentialsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).AuthService(ctx, in)
+		return srv.(UserServiceServer).AuthenticateUserCredentials(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_AuthService_FullMethodName,
+		FullMethod: UserService_AuthenticateUserCredentials_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).AuthService(ctx, req.(*proto.AuthenticateServiceRequest))
+		return srv.(UserServiceServer).AuthenticateUserCredentials(ctx, req.(*AuthUserCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_RequestRESTData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.RestDataRequest)
+func _UserService_AuthenticatePlatform_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthPlatformRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).RequestRESTData(ctx, in)
+		return srv.(UserServiceServer).AuthenticatePlatform(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_RequestRESTData_FullMethodName,
+		FullMethod: UserService_AuthenticatePlatform_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).RequestRESTData(ctx, req.(*proto.RestDataRequest))
+		return srv.(UserServiceServer).AuthenticatePlatform(ctx, req.(*AuthPlatformRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_AuthenticateServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthServerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).AuthenticateServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_AuthenticateServer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).AuthenticateServer(ctx, req.(*AuthServerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -147,12 +180,16 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "AuthService",
-			Handler:    _UserService_AuthService_Handler,
+			MethodName: "AuthenticateUserCredentials",
+			Handler:    _UserService_AuthenticateUserCredentials_Handler,
 		},
 		{
-			MethodName: "RequestRESTData",
-			Handler:    _UserService_RequestRESTData_Handler,
+			MethodName: "AuthenticatePlatform",
+			Handler:    _UserService_AuthenticatePlatform_Handler,
+		},
+		{
+			MethodName: "AuthenticateServer",
+			Handler:    _UserService_AuthenticateServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
