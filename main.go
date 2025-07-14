@@ -10,7 +10,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "ogb-user"
+	app.Name = "ogbuser"
 	app.Version = AppVersion
 	app.Description = "User management service for online games"
 	app.Usage = "User Microservice of OnlineGameBase ecosystem"
@@ -31,7 +31,7 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:  "serve",
-			Usage: "Start REST",
+			Usage: "Start user service",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:        "config",

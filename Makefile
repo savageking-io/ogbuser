@@ -36,6 +36,10 @@ windows:
 version:
 	@echo "Version: $(VERSION)"
 
+.PHONY: test
+test:
+	go test ./...
+
 .PHONY: help
 help:
 	@echo "Available targets:"
