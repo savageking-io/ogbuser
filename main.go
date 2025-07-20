@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/savageking-io/ogbuser/token"
 	"os"
 
 	ogb "github.com/savageking-io/ogbcommon"
@@ -68,9 +69,11 @@ func Serve(c *cli.Context) error {
 
 	log.Infof("Configuration loaded from %s", ConfigFilepath)
 
-	service := new(Service)
-	if err := service.InitializeRest(AppConfig.Rest); err != nil {
-		log.Errorf("Failed to initialize REST server: %v", err)
+	token.SetConfig(&AppConfig.Crypto.JWT)
+
+	service := NewService(&AppConfig)
+	if err := service.Init(); err != nil {
+		log.Errorf("Failed to initialize service: %v", err)
 		return err
 	}
 

@@ -8,10 +8,34 @@ rest:
   endpoints:
     - path: /auth/credentials
       method: POST
+      skip_auth_middleware: true
     - path: /auth/platform
       method: POST
+      skip_auth_middleware: true
     - path: /auth/server
       method: POST
+      skip_auth_middleware: true
 rpc:
   hostname: localhost
   port: 12122
+postgres:
+  ssl_mode: false
+  hostname: localhost
+  port: 5432
+  database: devdb
+  username: devuser
+  password: devpassword
+  max_open_conns: 32
+  max_idle_conns: 32
+  conn_max_lifetime: 1800
+crypto:
+  jwt:
+    secret: "very-secure-string"
+    issuer: "ogbuser"
+    expiry: 1440
+  argon:
+    memory: 65536
+    iterations: 3
+    parallelism: 2
+    salt_length: 16
+    key_length: 32

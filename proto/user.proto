@@ -3,28 +3,78 @@ syntax = "proto3";
 package user;
 option go_package = "github.com/savageking-io/ogbuser/proto";
 
+import "google/protobuf/timestamp.proto";
+
 service UserService {
+  rpc Ping(PingMessage) returns (PingMessage);
   rpc AuthenticateUserCredentials(AuthUserCredentialsRequest) returns (AuthResponse);
   rpc AuthenticatePlatform(AuthPlatformRequest) returns (AuthResponse);
   rpc AuthenticateServer(AuthServerRequest) returns (AuthResponse);
+  rpc AuthenticateWebSocketToken(AuthWebSocketTokenRequest) returns (AuthResponse);
+  rpc HasPermission(HasPermissionRequest) returns (HasPermissionResponse);
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc RenewToken(RenewTokenRequest) returns (RenewTokenResponse);
+}
+
+message PingMessage {
+  google.protobuf.Timestamp SentAt = 1;
+  google.protobuf.Timestamp RepliedAt = 2;
 }
 
 message AuthResponse {
-  int32 code = 1;
-  string error = 2;
-  string token = 3;
+  int32 Code = 1;
+  string Error = 2;
+  string Token = 3;
+  string UserId = 4;
 }
 
 message AuthUserCredentialsRequest {
-  string username = 1;
-  string password = 2;
+  string Username = 1;
+  string Password = 2;
 };
 
 message AuthPlatformRequest {
-  string platform = 1;
-  string auth_token = 2;
+  string Platform = 1;
+  string AuthToken = 2;
 }
 
 message AuthServerRequest {
-  string auth_token = 1;
+  string AuthToken = 1;
+}
+
+message AuthWebSocketTokenRequest {
+  string Token = 1;
+  int32 UserId = 2;
+}
+
+message HasPermissionRequest {
+  int32 UserId = 1;
+  string Permission = 2;
+}
+
+message HasPermissionResponse {
+  int32 Read = 1;
+  int32 Write = 2;
+  int32 Delete = 3;
+}
+
+message ValidateTokenRequest {
+  string Token = 1;
+}
+
+message ValidateTokenResponse {
+  int32 Code = 1;
+  string Error = 2;
+  bool IsValid = 3;
+  int32 UserId = 4;
+}
+
+message RenewTokenRequest {
+  string Token = 1;
+}
+
+message RenewTokenResponse {
+  int32 Code = 1;
+  string Error = 2;
+  string NewToken = 3;
 }
