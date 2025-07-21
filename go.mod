@@ -9,7 +9,7 @@ require (
 	github.com/savageking-io/ogbcommon v0.1.0
 	github.com/savageking-io/ogbrest/proto v0.2.0
 	github.com/savageking-io/ogbrest/restlib v0.0.0-20250714150801-ef44a8fa5416
-	github.com/savageking-io/ogbuser/proto v0.0.0-20250714170530-4ecb257175cf
+	github.com/savageking-io/ogbuser/proto v0.2.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.17
 	golang.org/x/crypto v0.36.0
