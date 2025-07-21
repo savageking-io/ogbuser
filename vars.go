@@ -8,11 +8,12 @@ import (
 var (
 	AppVersion     = "Undefined"
 	ConfigFilepath = "user-config.yaml"
-	LogLevel       = "info"
+	LogLevel       = ""
 	AppConfig      ServiceConfig
 )
 
 type ServiceConfig struct {
+	LogLevel string                         `yaml:"log_level"`
 	Rest     restlib.RestInterServiceConfig `yaml:"rest"`
 	Rpc      RpcConfig                      `yaml:"rpc"`
 	Postgres PostgresConfig                 `yaml:"postgres"`

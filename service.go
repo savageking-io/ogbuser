@@ -39,6 +39,10 @@ func NewService(config *ServiceConfig) *Service {
 func (s *Service) Init() error {
 	log.Infof("Initializing service")
 
+	return s.ConnectToDatabase()
+}
+
+func (s *Service) ConnectToDatabase() error {
 	sslMode := "disable"
 	if s.config.Postgres.SslMode {
 		sslMode = "require"
@@ -50,6 +54,8 @@ func (s *Service) Init() error {
 		s.config.Postgres.Password,
 		s.config.Postgres.Database,
 		sslMode)
+
+	log.Debugf("Connecting to database: %s", connStr)
 
 	var err error
 	s.db, err = sqlx.Connect("postgres", connStr)
