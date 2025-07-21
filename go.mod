@@ -7,7 +7,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/savageking-io/ogbcommon v0.1.0
-	github.com/savageking-io/ogbrest/proto v0.0.0-20250714150801-ef44a8fa5416
+	github.com/savageking-io/ogbrest/proto v0.2.0
 	github.com/savageking-io/ogbrest/restlib v0.0.0-20250714150801-ef44a8fa5416
 	github.com/savageking-io/ogbuser/proto v0.0.0-20250714170530-4ecb257175cf
 	github.com/sirupsen/logrus v1.9.3
