@@ -24,8 +24,13 @@ pipeline {
             }
         }
         stage('Deploy') {
+            when {
+                branch 'main'
+            }
             steps {
-                echo 'Deploying....'
+                script {
+                    build job: 'OnlineGameBase/Docker/ogbuser-dev', wait: true
+                }
             }
         }
     }
