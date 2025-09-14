@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/argon2"
 	"strings"
 )
@@ -48,6 +49,7 @@ func HashPassword(password string) (string, error) {
 }
 
 func VerifyPassword(password, encodedHash string) (bool, error) {
+	log.Traceln("VerifyPassword")
 	parts := strings.Split(encodedHash, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
 		return false, fmt.Errorf("invalid hash format")

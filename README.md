@@ -12,3 +12,4 @@
 | 12004 | <dynamic>                    | Error occurred while loading user from DB                    |
 | 12005 | <dynamic>                    | Failed to verify password due to encryption error            |
 | 12006 | failed to initialize session | Failed to initialize session due to token generation problem |
+| 12007 | failed to load groups        | Failed to load groups that a user is member of               |

@@ -14,6 +14,7 @@ service UserService {
   rpc HasPermission(HasPermissionRequest) returns (HasPermissionResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
   rpc RenewToken(RenewTokenRequest) returns (RenewTokenResponse);
+  rpc RegisterPermission(RegisterPermissionRequest) returns (RegisterPermissionResponse);
 }
 
 message PingMessage {
@@ -50,6 +51,7 @@ message AuthWebSocketTokenRequest {
 message HasPermissionRequest {
   int32 UserId = 1;
   string Permission = 2;
+  string Domain = 3;
 }
 
 message HasPermissionResponse {
@@ -77,4 +79,14 @@ message RenewTokenResponse {
   int32 Code = 1;
   string Error = 2;
   string NewToken = 3;
+}
+
+message RegisterPermissionRequest {
+  string Domain = 1;
+  string Permissions = 2;
+}
+
+message RegisterPermissionResponse {
+  int32 Code = 1;
+  int32 Error = 2;
 }

@@ -22,11 +22,11 @@ func SetConfig(inConfig *Config) {
 	config = *inConfig
 }
 
-func Generate(userId int) (string, error) {
+func Generate(userId int32) (string, error) {
 	expirationTime := time.Now().Add(time.Duration(config.Expiry) * time.Minute)
 
 	claims := &Claims{
-		UserId: userId,
+		UserId: int(userId),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

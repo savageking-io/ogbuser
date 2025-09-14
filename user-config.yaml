@@ -1,9 +1,9 @@
 ---
 log_level: trace
 rest:
-  hostname: localhost
+  hostname: ogbuser
   port: 12121
-  token: "random-token-for-user-service"
+  token: "random-token-for-user"
   root: "user"
   endpoints:
     - path: /auth/credentials
@@ -15,19 +15,23 @@ rest:
     - path: /auth/server
       method: POST
       skip_auth_middleware: true
+    - path: /token
+      method: POST
+      skip_auth_middleware: false
 rpc:
-  hostname: localhost
+  hostname: ogbuser
   port: 12122
 postgres:
   ssl_mode: false
-  hostname: localhost
+  hostname: userdb
   port: 5432
-  database: devdb
-  username: devuser
-  password: devpassword
+  database: userdb
+  username: userdbadmin
+  password: userdbpassword
   max_open_conns: 32
   max_idle_conns: 32
   conn_max_lifetime: 1800
+  source_file: db/db.sql
 crypto:
   jwt:
     secret: "very-secure-string"

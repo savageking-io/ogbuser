@@ -1,3 +1,3 @@
 module github.com/savageking-io/ogbuser/proto
 
-go 1.23.4
+go 1.25.1

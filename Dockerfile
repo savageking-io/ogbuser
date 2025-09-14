@@ -1,4 +1,4 @@
-FROM golang:1.23.4-alpine AS builder
+FROM golang:1.25.1-alpine AS builder
 
 WORKDIR /src
 
@@ -18,12 +18,14 @@ WORKDIR /app
 
 COPY --from=builder /app/ogbuser /app/ogbuser
 COPY user-config.yaml /app/user-config.yaml
+COPY db/db.sql /app/db/db.sql
 
 RUN chmod +x /app/ogbuser && \
     chown -R appuser:appgroup /app
 
 USER appuser
 
-EXPOSE 8090
+EXPOSE 12121
+EXPOSE 12122
 
 CMD ["/app/ogbuser", "serve", "--config", "/app/user-config.yaml"]

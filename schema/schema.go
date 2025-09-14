@@ -3,7 +3,7 @@ package schema
 import "time"
 
 type UserSchema struct {
-	Id        int                 `db:"id"`
+	Id        int32               `db:"id"`
 	Username  string              `db:"username"`
 	Password  string              `db:"password"`
 	Email     string              `db:"email"`
@@ -27,7 +27,7 @@ type PlatformSchema struct {
 
 type UserSessionSchema struct {
 	Id           int        `db:"id"`
-	UserId       int        `db:"user_id"`
+	UserId       int32      `db:"user_id"`
 	Token        string     `db:"token"`
 	PlatformName string     `db:"platform_name"`
 	CreatedAt    time.Time  `db:"created_at"`

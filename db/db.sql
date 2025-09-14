@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS users;
 DROP TYPE IF EXISTS platform_type;
 DROP TYPE IF EXISTS permission_domain;
 
-CREATE TYPE platform_type AS ENUM ('steam', 'eos', 'winstore', 'xbox', 'ps');
+CREATE TYPE platform_type AS ENUM ('steam', 'eos', 'winstore', 'xbox', 'ps', 'web');
 CREATE TYPE permission_domain AS ENUM ('own', 'party', 'guild', 'global');
 
 CREATE TABLE users

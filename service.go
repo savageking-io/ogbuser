@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/savageking-io/ogbcommon/dbinit"
 	restproto "github.com/savageking-io/ogbrest/proto"
 	"github.com/savageking-io/ogbrest/restlib"
+	"github.com/savageking-io/ogbuser/group"
 	"github.com/savageking-io/ogbuser/proto"
 	"github.com/savageking-io/ogbuser/schema"
 	"github.com/savageking-io/ogbuser/user"
@@ -24,8 +26,8 @@ type Service struct {
 	rest   *restlib.RestInterServiceServer
 	config *ServiceConfig
 	db     *sqlx.DB
-	groups []*Group
-	users  []*user.User
+	groups *group.GroupsData
+	users  *user.UsersData
 
 	proto.UnimplementedUserServiceServer
 }
@@ -33,6 +35,8 @@ type Service struct {
 func NewService(config *ServiceConfig) *Service {
 	return &Service{
 		config: config,
+		users:  user.NewUsersData(),
+		groups: group.NewGroupsData(),
 	}
 }
 
@@ -73,6 +77,20 @@ func (s *Service) ConnectToDatabase() error {
 
 	log.Infof("Connected to database %s", s.config.Postgres.Database)
 
+	// Populate db if it's empty
+	err = dbinit.VerifyTables([]string{"users", "platforms", "groups"}, s.db)
+	if err != nil {
+		log.Warnf("Table verification failed: %s", err.Error())
+		if s.config.Postgres.SourceFile == "" {
+			log.Errorf("No source file provided. Cannot populate database")
+			return err
+		}
+		if err := dbinit.Populate(s.db, s.config.Postgres.SourceFile); err != nil {
+			log.Errorf("Failed to populate database: %s", err.Error())
+			return err
+		}
+	}
+
 	if err := s.InitGroups(); err != nil {
 		log.Errorf("Failed to initialize groups: %v", err)
 		return err
@@ -111,13 +129,13 @@ func (s *Service) InitGroups() error {
 		return err
 	}
 
-	for _, group := range groups {
-		g := NewGroup(s.db)
-		if err := g.Init(context.Background(), group.Id); err != nil {
-			log.Errorf("Failed to initialize group %d: %v", group.Id, err)
+	for _, userGroup := range groups {
+		g := group.NewGroup(s.db)
+		if err := g.Init(context.Background(), userGroup.Id); err != nil {
+			log.Errorf("Failed to initialize group %d: %v", userGroup.Id, err)
 			continue
 		}
-		s.groups = append(s.groups, g)
+		s.groups.Add(*g)
 	}
 
 	return nil
@@ -131,14 +149,17 @@ func (s *Service) InitializeRest(config restlib.RestInterServiceConfig) error {
 	}
 
 	log.Infof("Registering handlers")
-	if err := s.rest.RegisterHandler("/auth/credentials", "POST", s.HandleAuthCredentialsRequest); err != nil {
+	if err := s.rest.RegisterHandler("/auth/credentials", "POST", s.HandleAuthCredentialsRequest, true); err != nil {
 		log.Warnf("Failed to register handler for /auth/credentials: %v", err)
 	}
-	if err := s.rest.RegisterHandler("/auth/platform", "POST", s.HandleAuthPlatformRequest); err != nil {
+	if err := s.rest.RegisterHandler("/auth/platform", "POST", s.HandleAuthPlatformRequest, true); err != nil {
 		log.Warnf("Failed to register handler for /auth/platform: %v", err)
 	}
-	if err := s.rest.RegisterHandler("/auth/server", "POST", s.HandleAuthServerRequest); err != nil {
+	if err := s.rest.RegisterHandler("/auth/server", "POST", s.HandleAuthServerRequest, true); err != nil {
 		log.Warnf("Failed to register handler for /auth/server: %v", err)
+	}
+	if err := s.rest.RegisterHandler("/token", "POST", s.HandleVerifyTokenRequest, false); err != nil {
+		log.Warnf("Failed to register handler for /token: %v", err)
 	}
 
 	for _, key := range s.rest.GetRegisteredHandlerKeys() {
@@ -251,6 +272,15 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 		}, fmt.Errorf("failed to load user: %w", err)
 	}
 
+	if err := u.LoadGroups(ctx); err != nil {
+		log.Errorf("failed to load groups: %v", err)
+		return &restproto.RestApiResponse{
+			HttpCode: 401,
+			Code:     12007,
+			Error:    err.Error(),
+		}, fmt.Errorf("failed to load user: %w", err)
+	}
+
 	ok, err := VerifyPassword(credentials.Password, u.GetPassword())
 	if err != nil {
 		return &restproto.RestApiResponse{
@@ -272,9 +302,10 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 	// @TODO: Handle timeout
 	// @TODO: Handle cleanup of duplicates
 	log.Debugf("User [%s] authenticated and cached", u.GetUsername())
-	s.users = append(s.users, u)
+	s.users.Add(*u)
 
-	session, err := u.InitializeSession(ctx)
+	// @TOOO: Properly determine user platform
+	session, err := u.InitializeSession(ctx, "web")
 	if err != nil {
 		return &restproto.RestApiResponse{
 			Code:     12006,
@@ -300,8 +331,123 @@ func (s *Service) HandleAuthServerRequest(ctx context.Context, in *restproto.Res
 	return nil, nil
 }
 
+func (s *Service) HandleVerifyTokenRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
+	log.Tracef("HandleVerifyTokenRequest")
+
+	return &restproto.RestApiResponse{
+		Code:     0,
+		HttpCode: 200,
+	}, nil
+}
+
 // UserService
 func (s *Service) Ping(ctx context.Context, in *proto.PingMessage) (*proto.PingMessage, error) {
 	in.RepliedAt = timestamppb.New(time.Now())
 	return in, nil
+}
+
+func (s *Service) ValidateToken(ctx context.Context, in *proto.ValidateTokenRequest) (*proto.ValidateTokenResponse, error) {
+	log.Tracef("ValidateToken")
+	log.Tracef("Request: %+v", in)
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return &proto.ValidateTokenResponse{
+			Code:  1,
+			Error: err.Error(),
+		}, err
+	}
+
+	sessionData := &schema.UserSessionSchema{}
+
+	query := `
+		SELECT user_id, created_at, updated_at
+		FROM user_sessions
+		WHERE token = $1 AND deleted_at IS NULL`
+
+	log.Tracef("Query: %s", query)
+
+	err = tx.GetContext(ctx, sessionData, query, in.Token)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return &proto.ValidateTokenResponse{
+				Code:    0,
+				IsValid: false,
+			}, nil
+		}
+		log.Errorf("[Service::ValidateToken] Failed to get session data: %s", err.Error())
+		return &proto.ValidateTokenResponse{
+			Code:  4,
+			Error: err.Error(),
+		}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.Errorf("[Service::ValidateToken] Failed to commit transaction: %s", err.Error())
+		return &proto.ValidateTokenResponse{
+			Code:    3,
+			Error:   err.Error(),
+			IsValid: false,
+		}, err
+	}
+
+	if time.Since(sessionData.CreatedAt) > time.Duration(AppConfig.Crypto.JWT.Expiry)*time.Minute {
+		log.Debugf("Token expired: %s. Duration: %+v", in.Token, time.Duration(AppConfig.Crypto.JWT.Expiry))
+		return &proto.ValidateTokenResponse{
+			Code:    0,
+			IsValid: false,
+			UserId:  int32(sessionData.UserId),
+		}, nil
+	}
+
+	log.Debugf("Token is valid: %s", in.Token)
+	return &proto.ValidateTokenResponse{
+		Code:    0,
+		IsValid: true,
+		UserId:  int32(sessionData.UserId),
+	}, nil
+}
+
+func (s *Service) HasPermission(ctx context.Context, in *proto.HasPermissionRequest) (*proto.HasPermissionResponse, error) {
+	log.Tracef("HasPermission")
+
+	if in.UserId == 0 {
+		return &proto.HasPermissionResponse{
+			Read:   0,
+			Write:  0,
+			Delete: 0,
+		}, fmt.Errorf("invalid user id")
+	}
+
+	user, err := s.users.GetById(in.UserId)
+	if err != nil {
+		return &proto.HasPermissionResponse{
+			Read:   0,
+			Write:  0,
+			Delete: 0,
+		}, fmt.Errorf("user not found")
+	}
+
+	permission, err := user.GetPermission(in.Permission, in.Domain)
+	if err != nil {
+		return &proto.HasPermissionResponse{
+			Read:   0,
+			Write:  0,
+			Delete: 0,
+		}, err
+	}
+
+	return &proto.HasPermissionResponse{
+		Read:   boolToInt32(permission.Read),
+		Write:  boolToInt32(permission.Write),
+		Delete: boolToInt32(permission.Delete),
+	}, nil
+}
+
+func boolToInt32(b bool) int32 {
+	if b {
+		return 1
+	}
+	return 0
 }

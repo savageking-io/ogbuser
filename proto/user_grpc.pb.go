@@ -27,6 +27,7 @@ const (
 	UserService_HasPermission_FullMethodName               = "/user.UserService/HasPermission"
 	UserService_ValidateToken_FullMethodName               = "/user.UserService/ValidateToken"
 	UserService_RenewToken_FullMethodName                  = "/user.UserService/RenewToken"
+	UserService_RegisterPermission_FullMethodName          = "/user.UserService/RegisterPermission"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -41,6 +42,7 @@ type UserServiceClient interface {
 	HasPermission(ctx context.Context, in *HasPermissionRequest, opts ...grpc.CallOption) (*HasPermissionResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 	RenewToken(ctx context.Context, in *RenewTokenRequest, opts ...grpc.CallOption) (*RenewTokenResponse, error)
+	RegisterPermission(ctx context.Context, in *RegisterPermissionRequest, opts ...grpc.CallOption) (*RegisterPermissionResponse, error)
 }
 
 type userServiceClient struct {
@@ -131,6 +133,16 @@ func (c *userServiceClient) RenewToken(ctx context.Context, in *RenewTokenReques
 	return out, nil
 }
 
+func (c *userServiceClient) RegisterPermission(ctx context.Context, in *RegisterPermissionRequest, opts ...grpc.CallOption) (*RegisterPermissionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterPermissionResponse)
+	err := c.cc.Invoke(ctx, UserService_RegisterPermission_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -143,6 +155,7 @@ type UserServiceServer interface {
 	HasPermission(context.Context, *HasPermissionRequest) (*HasPermissionResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 	RenewToken(context.Context, *RenewTokenRequest) (*RenewTokenResponse, error)
+	RegisterPermission(context.Context, *RegisterPermissionRequest) (*RegisterPermissionResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -176,6 +189,9 @@ func (UnimplementedUserServiceServer) ValidateToken(context.Context, *ValidateTo
 }
 func (UnimplementedUserServiceServer) RenewToken(context.Context, *RenewTokenRequest) (*RenewTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RenewToken not implemented")
+}
+func (UnimplementedUserServiceServer) RegisterPermission(context.Context, *RegisterPermissionRequest) (*RegisterPermissionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterPermission not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -342,6 +358,24 @@ func _UserService_RenewToken_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_RegisterPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterPermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).RegisterPermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_RegisterPermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).RegisterPermission(ctx, req.(*RegisterPermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -380,6 +414,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RenewToken",
 			Handler:    _UserService_RenewToken_Handler,
+		},
+		{
+			MethodName: "RegisterPermission",
+			Handler:    _UserService_RegisterPermission_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
