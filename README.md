@@ -13,3 +13,16 @@
 | 12005 | <dynamic>                    | Failed to verify password due to encryption error            |
 | 12006 | failed to initialize session | Failed to initialize session due to token generation problem |
 | 12007 | failed to load groups        | Failed to load groups that a user is member of               |
+| 12008 | failed to set permissions    | Failed to set permissions based on user's groups             |
+
+
+### Permissions and Scopes
+Each microservice defines their own scopes and user permissions. Globally
+each permission has 3 access bits - Read, Write and Delete. Another important thing 
+that defines permission is a domain - own, party, guild and global. 
+
+Examples:
+* OWN 1 READ 0 NOWRITE 0 NODELETE will allow user to read their own
+data, but restrict writing (updating) or deleting.
+* PARTY 1 READ 0 NOWRITE 0 NODELETE will be able to read data from an 
+entire party

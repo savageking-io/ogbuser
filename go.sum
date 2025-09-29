@@ -36,8 +36,8 @@ github.com/savageking-io/ogbrest/proto v0.4.0 h1:W4EnVqcmqshAb25Vf3T/v34hgeY/284
 github.com/savageking-io/ogbrest/proto v0.4.0/go.mod h1:6coPh5jJyeXcnw8mLzXcRjgPAfIR+gQhCLN+YUVRKoc=
 github.com/savageking-io/ogbrest/restlib v0.4.0 h1:tKa92DoTkT45qlyAFm12xCaVqVU9HCgh+rs30yOpjbs=
 github.com/savageking-io/ogbrest/restlib v0.4.0/go.mod h1:KNpwimA12jTNLNjg3zQuSgo15nOK0O/9+lOYB9BB05o=
-github.com/savageking-io/ogbuser/proto v0.2.0 h1:jcgimRS+U03soxbqI2UGPq5fBUPVc27A03RsgSBLy9U=
-github.com/savageking-io/ogbuser/proto v0.2.0/go.mod h1:OgNU0EOjakNUQSUuqBO55dxPiEkDYn8j6US0ortqFGE=
+github.com/savageking-io/ogbuser/proto v0.4.0 h1:IwQ5jc1sllyWpC0TCsEHJap+8zL2O9pItmARA/3LsL0=
+github.com/savageking-io/ogbuser/proto v0.4.0/go.mod h1:QUIVz16Ir6VRrjv6PavVZ/yThklono/8PHU/ib1HV9M=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

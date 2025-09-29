@@ -16,8 +16,8 @@ type UserSchema struct {
 }
 
 type PlatformSchema struct {
-	Id             int        `db:"id"`
-	UserId         int        `db:"user_id"`
+	Id             int32      `db:"id"`
+	UserId         int32      `db:"user_id"`
 	PlatformName   string     `db:"platform_name"`
 	PlatformUserId string     `db:"platform_user_id"`
 	CreatedAt      time.Time  `db:"created_at"`
@@ -26,7 +26,7 @@ type PlatformSchema struct {
 }
 
 type UserSessionSchema struct {
-	Id           int        `db:"id"`
+	Id           int32      `db:"id"`
 	UserId       int32      `db:"user_id"`
 	Token        string     `db:"token"`
 	PlatformName string     `db:"platform_name"`
@@ -36,8 +36,8 @@ type UserSessionSchema struct {
 }
 
 type GroupSchema struct {
-	Id          int                     `db:"id"`
-	ParentId    int                     `db:"parent_id"`
+	Id          int32                   `db:"id"`
+	ParentId    int32                   `db:"parent_id"`
 	Name        string                  `db:"name"`
 	Description *string                 `db:"description"`
 	IsSpecial   bool                    `db:"is_special"`
@@ -48,17 +48,17 @@ type GroupSchema struct {
 }
 
 type GroupMemberSchema struct {
-	Id        int        `db:"id"`
-	GroupId   int        `db:"group_id"`
-	UserId    int        `db:"user_id"`
+	Id        int32      `db:"id"`
+	GroupId   int32      `db:"group_id"`
+	UserId    int32      `db:"user_id"`
 	CreatedAt time.Time  `db:"created_at"`
 	UpdatedAt time.Time  `db:"updated_at"`
 	DeletedAt *time.Time `db:"deleted_at"`
 }
 
 type GroupPermissionSchema struct {
-	Id         int        `db:"id"`
-	GroupId    int        `db:"group_id"`
+	Id         int32      `db:"id"`
+	GroupId    int32      `db:"group_id"`
 	Permission string     `db:"permission"`
 	Read       bool       `db:"read"`
 	Write      bool       `db:"write"`
@@ -67,4 +67,11 @@ type GroupPermissionSchema struct {
 	CreatedAt  time.Time  `db:"created_at"`
 	UpdatedAt  time.Time  `db:"updated_at"`
 	DeletedAt  *time.Time `db:"deleted_at"`
+}
+
+func BoolToInt32(b bool) int32 {
+	if b {
+		return 1
+	}
+	return 0
 }

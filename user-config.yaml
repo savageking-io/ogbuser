@@ -28,8 +28,8 @@ postgres:
   database: userdb
   username: userdbadmin
   password: userdbpassword
-  max_open_conns: 32
-  max_idle_conns: 32
+  max_open_cons: 32
+  max_idle_cons: 32
   conn_max_lifetime: 1800
   source_file: db/db.sql
 crypto:

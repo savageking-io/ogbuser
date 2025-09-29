@@ -2,268 +2,125 @@ package user
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"github.com/jmoiron/sqlx"
+	"github.com/savageking-io/ogbuser/db"
+	"github.com/savageking-io/ogbuser/group"
+	"github.com/savageking-io/ogbuser/perm"
 	"github.com/savageking-io/ogbuser/schema"
 	"github.com/savageking-io/ogbuser/token"
 	log "github.com/sirupsen/logrus"
-	"strings"
-	"time"
 )
-
-var (
-	ErrUserNotFound = errors.New("user not found")
-)
-
-type Permission struct {
-	Read   bool
-	Write  bool
-	Delete bool
-}
 
 type User struct {
-	data              *schema.UserSchema
-	db                *sqlx.DB
-	ownPermissions    map[string]Permission
-	partyPermissions  map[string]Permission
-	guildPermissions  map[string]Permission
-	globalPermissions map[string]Permission
+	raw      *schema.UserSchema
+	db       *db.Database
+	perms    *perm.Perm
+	groups   *group.GroupsData
+	sessions []*schema.UserSessionSchema
 }
 
-func NewUser(db *sqlx.DB, data *schema.UserSchema) *User {
+func NewUser(db *db.Database, data *schema.UserSchema) *User {
 	return &User{
-		data:              data,
-		db:                db,
-		ownPermissions:    make(map[string]Permission),
-		partyPermissions:  make(map[string]Permission),
-		guildPermissions:  make(map[string]Permission),
-		globalPermissions: make(map[string]Permission),
+		raw:    data,
+		db:     db,
+		perms:  perm.NewPerm(),
+		groups: group.NewGroupsData(),
 	}
 }
 
-func (u *User) SetGroups(groups []schema.GroupSchema) {
-	u.data.Groups = groups
+func (u *User) AddGroup(group *group.Group) {
+	u.groups.Add(group)
 }
 
 func (u *User) GetId() int32 {
-	return u.data.Id
+	return u.raw.Id
 }
 
 func (u *User) GetUsername() string {
-	return u.data.Username
+	return u.raw.Username
 }
 
 func (u *User) GetPassword() string {
-	return u.data.Password
+	return u.raw.Password
 }
 
 func (u *User) GetEmail() string {
-	return u.data.Email
+	return u.raw.Email
 }
 
 func (u *User) GetCreatedAt() string {
-	return u.data.CreatedAt.String()
+	return u.raw.CreatedAt.String()
 }
 
-func (u *User) LoadById(ctx context.Context, id int) error {
-	log.Tracef("User::LoadById %d", id)
-	if u.db == nil {
-		return fmt.Errorf("DB is not initialized")
-	}
-
-	tx, err := u.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	u.data = &schema.UserSchema{}
-
-	query := `
-		SELECT id, username, password, email, created_at, updated_at, deleted_at
-		FROM users
-		WHERE id = $1 AND deleted_at IS NULL`
-
-	err = tx.GetContext(ctx, u.data, query, id)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrUserNotFound
-		}
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
+// LoadByUsername will request user data from database and populate the object
+// return ErrUserNotFound if user with provided username doesn't exist or generic error on other failures
 func (u *User) LoadByUsername(ctx context.Context, username string) error {
 	log.Tracef("User::LoadByUsername: %s", username)
 	if u.db == nil {
 		return fmt.Errorf("DB is not initialized")
 	}
 
-	tx, err := u.db.BeginTxx(ctx, nil)
+	userSchema, err := u.db.LoadUserByUsername(ctx, username)
 	if err != nil {
 		return err
 	}
 
-	u.data = &schema.UserSchema{}
-	query := `
-		SELECT id, username, password, email, created_at, updated_at, deleted_at
-		FROM users 
-		WHERE username = $1 AND deleted_at IS NULL`
-
-	if strings.Contains(username, "@") {
-		query = `
-			SELECT id, username, password, email, created_at, updated_at, deleted_at
-			FROM users 
-			WHERE email = $1 AND deleted_at IS NULL`
-
+	if userSchema == nil {
+		return fmt.Errorf("nil user schema without an error")
 	}
 
-	err = tx.GetContext(ctx, u.data, query, username)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrUserNotFound
-		}
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
+	u.raw = userSchema
 	return nil
 }
 
+// InitializeSession will generate a new token for the user and store it in database
 func (u *User) InitializeSession(ctx context.Context, inPlatform string) (*schema.UserSessionSchema, error) {
 	log.Traceln("User::InitializeSession")
 	if u.db == nil {
 		return nil, fmt.Errorf("DB is not initialized")
 	}
 
-	if u.data == nil {
+	if u.raw == nil {
 		return nil, fmt.Errorf("user is not initialized")
 	}
 
-	if u.data.Id == 0 {
+	if u.raw.Id == 0 {
 		return nil, fmt.Errorf("user id is not set")
 	}
 
-	userToken, err := token.Generate(u.data.Id)
+	userToken, err := token.Generate(u.raw.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	session := schema.UserSessionSchema{
-		UserId:       u.data.Id,
-		Token:        userToken,
-		CreatedAt:    time.Now(),
-		PlatformName: inPlatform,
-	}
-	u.data.Sessions = append(u.data.Sessions, session)
-
-	tx, err := u.db.BeginTxx(ctx, nil)
+	session, err := u.db.SaveUserSession(ctx, u.GetId(), userToken, inPlatform)
 	if err != nil {
-		return nil, err
-	}
-	query := `
-		INSERT INTO user_sessions (user_id, token, created_at, platform_name) VALUES (:user_id, :token, :created_at, :platform_name)
-		`
-	_, err = tx.NamedExecContext(ctx, query, &session)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to save user session: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
+	u.sessions = append(u.sessions, session)
 
-	return &session, nil
+	return session, nil
 }
 
-func (u *User) LoadGroups(ctx context.Context) error {
+// LoadGroups will return a list of groups that this user belongs to
+func (u *User) LoadGroups(ctx context.Context) ([]int32, error) {
 	log.Tracef("User::LoadGroups")
 	if u.db == nil {
-		return fmt.Errorf("DB is not initialized")
+		return nil, fmt.Errorf("DB is not initialized")
 	}
 
-	if u.data == nil {
-		return fmt.Errorf("user is not initialized")
+	if u.raw == nil {
+		return nil, fmt.Errorf("user is not initialized")
 	}
 
-	tx, err := u.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return nil
-	}
-	query := `SELECT group_id FROM group_members WHERE user_id = $1 AND deleted_at IS NULL`
-	_, err = tx.NamedExecContext(ctx, query, &u.data.Groups)
-	if err != nil {
-		return err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return u.db.GetUserGroupIds(ctx, u.raw.Id)
 }
 
-func (u *User) GetPermission(permission string, domain string) (Permission, error) {
-	log.Tracef("User::GetPermission: %s", permission)
-	if domain == "own" {
-		return u.GetOwnPermission(permission)
+func (u *User) HasPermission(ctx context.Context, permission string, domain string) (*perm.Permission, error) {
+	if u.perms == nil {
+		return nil, fmt.Errorf("permissions are not initialized")
 	}
-	if domain == "party" {
-		return u.GetPartyPermission(permission)
-	}
-	if domain == "guild" {
-		return u.GetGuildPermission(permission)
-	}
-	if domain == "global" {
-		return u.GetGlobalPermission(permission)
-	}
-	return Permission{}, fmt.Errorf("invalid domain")
-}
 
-func (u *User) GetOwnPermission(permission string) (Permission, error) {
-	log.Tracef("User::GetOwnPermission: %s", permission)
-	perm, ok := u.ownPermissions[permission]
-	if !ok {
-		return Permission{}, fmt.Errorf("permission not found")
-	}
-	return perm, nil
-}
-
-func (u *User) GetPartyPermission(permission string) (Permission, error) {
-	log.Tracef("User::GetPartyPermission: %s", permission)
-	perm, ok := u.partyPermissions[permission]
-	if !ok {
-		return Permission{}, fmt.Errorf("permission not found")
-	}
-	return perm, nil
-}
-
-func (u *User) GetGuildPermission(permission string) (Permission, error) {
-	log.Tracef("User::GetGuildPermission: %s", permission)
-	perm, ok := u.guildPermissions[permission]
-	if !ok {
-		return Permission{}, fmt.Errorf("permission not found")
-	}
-	return perm, nil
-}
-
-func (u *User) GetGlobalPermission(permission string) (Permission, error) {
-	log.Tracef("User::GetGlobalPermission: %s", permission)
-	perm, ok := u.globalPermissions[permission]
-	if !ok {
-		return Permission{}, fmt.Errorf("permission not found")
-	}
-	return perm, nil
+	return u.perms.GetPermission(domain, permission), nil
 }

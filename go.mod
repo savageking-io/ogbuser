@@ -1,6 +1,6 @@
 module github.com/savageking-io/ogbuser
 
-go 1.24.0
+go 1.25.1
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -9,7 +9,7 @@ require (
 	github.com/savageking-io/ogbcommon v0.2.0
 	github.com/savageking-io/ogbrest/proto v0.4.0
 	github.com/savageking-io/ogbrest/restlib v0.4.0
-	github.com/savageking-io/ogbuser/proto v0.2.0
+	github.com/savageking-io/ogbuser/proto v0.4.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli v1.22.17
 	golang.org/x/crypto v0.42.0

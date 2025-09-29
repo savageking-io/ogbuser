@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/savageking-io/ogbrest/restlib"
+	"github.com/savageking-io/ogbuser/db"
 	"github.com/savageking-io/ogbuser/token"
 )
 
@@ -16,26 +17,13 @@ type ServiceConfig struct {
 	LogLevel string                         `yaml:"log_level"`
 	Rest     restlib.RestInterServiceConfig `yaml:"rest"`
 	Rpc      RpcConfig                      `yaml:"rpc"`
-	Postgres PostgresConfig                 `yaml:"postgres"`
+	Postgres db.PostgresConfig              `yaml:"postgres"`
 	Crypto   CryptoConfig                   `yaml:"crypto"`
 }
 
 type RpcConfig struct {
 	Hostname string `yaml:"hostname"`
 	Port     uint16 `yaml:"port"`
-}
-
-type PostgresConfig struct {
-	Hostname        string `yaml:"hostname"`
-	Port            uint16 `yaml:"port"`
-	Username        string `yaml:"username"`
-	Password        string `yaml:"password"`
-	Database        string `yaml:"database"`
-	SslMode         bool   `yaml:"ssl_mode"`
-	MaxOpenConns    int    `yaml:"max_open_conns"`
-	MaxIdleConns    int    `yaml:"max_idle_conns"`
-	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
-	SourceFile      string `yaml:"source_file"`
 }
 
 type CryptoConfig struct {
