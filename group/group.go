@@ -73,10 +73,17 @@ func (g *Group) Init(ctx context.Context) error {
 	return nil
 }
 
+// GetId returns group id from raw data. Id can't be 0
 func (g *Group) GetId() int32 {
+	if !g.hasRawData {
+		return 0
+	}
 	return g.raw.Id
 }
 
 func (g *Group) GetName() string {
+	if !g.hasRawData {
+		return ""
+	}
 	return g.raw.Name
 }

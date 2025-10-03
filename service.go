@@ -193,11 +193,12 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 
 	err := json.Unmarshal([]byte(in.Body), &credentials)
 	if err != nil {
+		log.Debugf("Failed to unmarshal request body: %v", err)
 		return &restproto.RestApiResponse{
 			Code:     12000,
 			HttpCode: 400,
 			Error:    "failed to parse request",
-		}, fmt.Errorf("failed to unmarshal request body: %w", err)
+		}, nil
 	}
 
 	username := ""
@@ -206,45 +207,68 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 	} else if credentials.Username != "" && credentials.Email == "" {
 		username = credentials.Username
 	} else {
+		log.Debugf("Username and email are both empty")
 		return &restproto.RestApiResponse{
 			Code:     12001,
 			HttpCode: 400,
 			Error:    "empty username",
-		}, fmt.Errorf("username and email are both empty")
+		}, nil
 	}
 
 	if credentials.Password == "" {
+		log.Debugf("Empty password")
 		return &restproto.RestApiResponse{
 			Code:     12002,
 			HttpCode: 400,
 			Error:    "empty password",
-		}, fmt.Errorf("empty password")
+		}, nil
 	}
 
 	u := user.NewUser(s.db, nil)
 	if err := u.LoadByUsername(ctx, username); err != nil {
 		if errors.Is(err, db.ErrUserNotFound) {
+			log.Debugf("User not found: %s", username)
 			return &restproto.RestApiResponse{
 				Code:     12003,
-				HttpCode: 404,
+				HttpCode: 401,
 				Error:    err.Error(),
-			}, fmt.Errorf("user not found")
+			}, nil
 		}
+		log.Errorf("failed to load user: %v", err)
 		return &restproto.RestApiResponse{
-			HttpCode: 401,
+			HttpCode: 500,
 			Code:     12004,
 			Error:    err.Error(),
-		}, fmt.Errorf("failed to load user: %w", err)
+		}, nil
+	}
+
+	ok, err := VerifyPassword(credentials.Password, u.GetPassword())
+	if err != nil {
+		log.Debugf("Password verification failed: %v", err)
+		return &restproto.RestApiResponse{
+			HttpCode: 500,
+			Code:     12005,
+			Error:    err.Error(),
+		}, nil
+	}
+
+	if !ok {
+		log.Debugf("Password verification failed")
+		return &restproto.RestApiResponse{
+			Code:     12003,
+			HttpCode: 401,
+			Error:    "wrong credentials",
+		}, nil
 	}
 
 	groupIds, err := u.LoadGroups(ctx)
 	if err != nil {
-		log.Errorf("failed to load groups: %v", err)
+		log.Errorf("Failed to load groups: %v", err)
 		return &restproto.RestApiResponse{
 			HttpCode: 401,
 			Code:     12007,
 			Error:    err.Error(),
-		}, fmt.Errorf("failed to load user: %w", err)
+		}, nil
 	}
 
 	log.Infof("Loaded %d groups", len(groupIds))
@@ -257,23 +281,6 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 		u.AddGroup(userGroup)
 	}
 
-	ok, err := VerifyPassword(credentials.Password, u.GetPassword())
-	if err != nil {
-		return &restproto.RestApiResponse{
-			HttpCode: 500,
-			Code:     12005,
-			Error:    err.Error(),
-		}, fmt.Errorf("failed to verify password")
-	}
-
-	if !ok {
-		return &restproto.RestApiResponse{
-			Code:     12003,
-			HttpCode: 404,
-			Error:    "user not found",
-		}, fmt.Errorf("user not found")
-	}
-
 	// We keep users cached until they log out or we didn't receive anything from them for a long period of time
 	// @TODO: Handle timeout
 	// @TODO: Handle cleanup of duplicates
@@ -284,17 +291,18 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 			Code:     12009,
 			HttpCode: 500,
 			Error:    "user load error",
-		}, fmt.Errorf("user load error")
+		}, nil
 	}
 
 	// @TOOO: Properly determine user platform
 	session, err := u.InitializeSession(ctx, "web")
 	if err != nil {
+		log.Errorf("Failed to initialize session: %v", err)
 		return &restproto.RestApiResponse{
 			Code:     12006,
 			HttpCode: 500,
 			Error:    err.Error(),
-		}, fmt.Errorf("failed to initialize session: %w", err)
+		}, nil
 	}
 
 	return &restproto.RestApiResponse{
@@ -306,6 +314,7 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 
 func (s *Service) HandleAuthPlatformRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
 	log.Tracef("HandleAuthPlatformRequest")
+
 	return nil, nil
 }
 
