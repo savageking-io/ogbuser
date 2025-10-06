@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/savageking-io/ogbuser/token"
 	"os"
+	"time"
 
 	ogb "github.com/savageking-io/ogbcommon"
 	log "github.com/sirupsen/logrus"
@@ -78,9 +79,18 @@ func Serve(c *cli.Context) error {
 	token.SetConfig(&AppConfig.Crypto.JWT)
 
 	service := NewService(&AppConfig)
-	if err := service.Init(); err != nil {
-		log.Errorf("Failed to initialize service: %v", err)
-		return err
+	startedAt := time.Unix(0, 0)
+	for {
+		if time.Since(startedAt) < time.Duration(time.Millisecond*1000) {
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+		if err := service.Init(); err != nil {
+			log.Errorf("Failed to initialize service: %v", err)
+			startedAt = time.Now()
+		} else {
+			break
+		}
 	}
 
 	return service.Start()
