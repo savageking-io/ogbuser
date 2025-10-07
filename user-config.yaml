@@ -43,3 +43,7 @@ crypto:
     parallelism: 2
     salt_length: 16
     key_length: 32
+kafka:
+  brokers:
+    - kafka:29092
+  topic: "user"

@@ -73,6 +73,25 @@ func (u *User) LoadByUsername(ctx context.Context, username string) error {
 	return nil
 }
 
+func (u *User) LoadBySteamId(ctx context.Context, steamId string) error {
+	log.Tracef("User::LoadBySteamId: %s", steamId)
+	if u.db == nil {
+		return fmt.Errorf("DB is not initialized")
+	}
+
+	result, err := u.db.LoadUserBySteamId(ctx, steamId)
+	if err != nil {
+		return err
+	}
+
+	if result == nil {
+		return fmt.Errorf("nil user schema without an error")
+	}
+
+	u.raw = result
+	return nil
+}
+
 // InitializeSession will generate a new token for the user and store it in database
 func (u *User) InitializeSession(ctx context.Context, inPlatform string) (*schema.UserSessionSchema, error) {
 	log.Traceln("User::InitializeSession")

@@ -8,8 +8,10 @@ import (
 	_ "github.com/lib/pq"
 	restproto "github.com/savageking-io/ogbrest/proto"
 	"github.com/savageking-io/ogbrest/restlib"
+	steam "github.com/savageking-io/ogbsteam/client"
 	"github.com/savageking-io/ogbuser/db"
 	"github.com/savageking-io/ogbuser/group"
+	"github.com/savageking-io/ogbuser/kafka"
 	"github.com/savageking-io/ogbuser/proto"
 	"github.com/savageking-io/ogbuser/user"
 	log "github.com/sirupsen/logrus"
@@ -25,15 +27,18 @@ type Service struct {
 	db     *db.Database
 	groups *group.GroupsData
 	users  *user.UsersData
+	kafka  kafka.Publisher
+	steam  *steam.Client
 
 	proto.UnimplementedUserServiceServer
 }
 
-func NewService(config *ServiceConfig) *Service {
+func NewService(config *ServiceConfig, steam *steam.Client) *Service {
 	return &Service{
 		config: config,
 		users:  user.NewUsersData(nil),
 		groups: group.NewGroupsData(),
+		steam:  steam,
 	}
 }
 
@@ -55,6 +60,13 @@ func (s *Service) Init() error {
 		log.Errorf("Failed to initialize REST server: %v", err)
 		return err
 	}
+
+	if err := s.kafka.Init(s.config.Kafka); err != nil {
+		log.Errorf("Failed to initialize kafka server: %v", err)
+		return err
+	}
+
+	go s.kafka.LogServerStarted()
 
 	return nil
 }
@@ -315,7 +327,112 @@ func (s *Service) HandleAuthCredentialsRequest(ctx context.Context, in *restprot
 func (s *Service) HandleAuthPlatformRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {
 	log.Tracef("HandleAuthPlatformRequest")
 
-	return nil, nil
+	if s.steam == nil {
+		log.Errorf("steam client not initialized")
+		return nil, fmt.Errorf("steam client not initialized")
+	}
+
+	credentials := struct {
+		Token string `json:"token"`
+	}{}
+
+	err := json.Unmarshal([]byte(in.Body), &credentials)
+	if err != nil {
+		log.Debugf("Failed to unmarshal request body: %v", err)
+		return &restproto.RestApiResponse{
+			Code:     13000,
+			HttpCode: 400,
+			Error:    "failed to parse request",
+		}, nil
+	}
+
+	result, err := s.steam.AuthenticateTicket(ctx, credentials.Token)
+	if err != nil {
+		log.Errorf("Failed to authenticate: %v", err)
+		return &restproto.RestApiResponse{
+			Code:     13001,
+			HttpCode: 400,
+			Error:    "failed to authenticate",
+		}, nil
+	}
+
+	if result == nil {
+		log.Errorf("Received nil result from Steam auth without error")
+		return &restproto.RestApiResponse{
+			Code:     13002,
+			HttpCode: 400,
+			Error:    "failed to authenticate",
+		}, nil
+	}
+
+	if result.SteamId == "" {
+		log.Errorf("Received empty steam id from Steam - consider not authenticated")
+		return &restproto.RestApiResponse{
+			Code:     13003,
+			HttpCode: 400,
+			Error:    "failed to authenticate",
+		}, nil
+	}
+
+	u := user.NewUser(s.db, nil)
+	if err := u.LoadBySteamId(ctx, result.SteamId); err != nil {
+		log.Errorf("failed to load user: %v", err)
+		return &restproto.RestApiResponse{
+			HttpCode: 500,
+			Code:     13004,
+			Error:    err.Error(),
+		}, nil
+	}
+
+	groupIds, err := u.LoadGroups(ctx)
+	if err != nil {
+		log.Errorf("Failed to load groups: %v", err)
+		return &restproto.RestApiResponse{
+			HttpCode: 401,
+			Code:     13005,
+			Error:    err.Error(),
+		}, nil
+	}
+
+	log.Infof("Loaded %d groups", len(groupIds))
+	for _, groupId := range groupIds {
+		userGroup, exists := s.groups.Get(groupId)
+		if !exists {
+			log.Errorf("Service::HandleAuthCredentialsRequest: Group %d not found for user %d", groupId, u.GetId())
+			continue
+		}
+		u.AddGroup(userGroup)
+	}
+
+	// We keep users cached until they log out or we didn't receive anything from them for a long period of time
+	// @TODO: Handle timeout
+	// @TODO: Handle cleanup of duplicates
+	log.Debugf("User [%s] authenticated and cached", u.GetUsername())
+	if err := s.users.Add(u); err != nil {
+		log.Errorf("failed to add user to cache: %v", err)
+		return &restproto.RestApiResponse{
+			Code:     12009,
+			HttpCode: 500,
+			Error:    "user load error",
+		}, nil
+	}
+
+	// @TOOO: Properly determine user platform
+	session, err := u.InitializeSession(ctx, "web")
+	if err != nil {
+		log.Errorf("Failed to initialize session: %v", err)
+		return &restproto.RestApiResponse{
+			Code:     12006,
+			HttpCode: 500,
+			Error:    err.Error(),
+		}, nil
+	}
+
+	return &restproto.RestApiResponse{
+		Code:     0,
+		HttpCode: 200,
+		Body:     fmt.Sprintf(`{"id": %d, "username": "%s", "email": "%s", "token": "%s"}`, u.GetId(), u.GetUsername(), u.GetEmail(), session.Token),
+	}, nil
 }
 
 func (s *Service) HandleAuthServerRequest(ctx context.Context, in *restproto.RestApiRequest) (*restproto.RestApiResponse, error) {

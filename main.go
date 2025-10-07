@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ogb "github.com/savageking-io/ogbcommon"
+	steam "github.com/savageking-io/ogbsteam/client"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -78,7 +79,15 @@ func Serve(c *cli.Context) error {
 
 	token.SetConfig(&AppConfig.Crypto.JWT)
 
-	service := NewService(&AppConfig)
+	steamClient := steam.NewClient(AppConfig.SteamClient.Hostname, AppConfig.SteamClient.Port)
+	go func() {
+		if err := steamClient.Run(); err != nil {
+			// @TODO: This is a critical issue - we should find a waay to handle it
+			log.Errorf("Steam client failed to start: %s", err.Error())
+		}
+	}()
+
+	service := NewService(&AppConfig, steamClient)
 	startedAt := time.Unix(0, 0)
 	for {
 		if time.Since(startedAt) < time.Duration(time.Millisecond*1000) {

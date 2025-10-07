@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/savageking-io/ogbrest/restlib"
+	steam "github.com/savageking-io/ogbsteam/client"
 	"github.com/savageking-io/ogbuser/db"
+	"github.com/savageking-io/ogbuser/kafka"
 	"github.com/savageking-io/ogbuser/token"
 )
 
@@ -14,11 +16,13 @@ var (
 )
 
 type ServiceConfig struct {
-	LogLevel string                         `yaml:"log_level"`
-	Rest     restlib.RestInterServiceConfig `yaml:"rest"`
-	Rpc      RpcConfig                      `yaml:"rpc"`
-	Postgres db.PostgresConfig              `yaml:"postgres"`
-	Crypto   CryptoConfig                   `yaml:"crypto"`
+	LogLevel    string                         `yaml:"log_level"`
+	Rest        restlib.RestInterServiceConfig `yaml:"rest"`
+	Rpc         RpcConfig                      `yaml:"rpc"`
+	Postgres    db.PostgresConfig              `yaml:"postgres"`
+	Crypto      CryptoConfig                   `yaml:"crypto"`
+	Kafka       kafka.Config                   `yaml:"kafka"`
+	SteamClient steam.Config                   `yaml:"steam_client"`
 }
 
 type RpcConfig struct {

@@ -250,7 +250,7 @@ func (d *Database) LoadUserById(ctx context.Context, id int32) (*schema.UserSche
 }
 
 func (d *Database) LoadUserByUsername(ctx context.Context, username string) (*schema.UserSchema, error) {
-	log.Tracef("Database::LoadByUsername: %s", username)
+	log.Traceln("Database::LoadByUsername:", username)
 	if d.db == nil {
 		return nil, fmt.Errorf("database is not initialized")
 	}
@@ -290,7 +290,38 @@ func (d *Database) LoadUserByUsername(ctx context.Context, username string) (*sc
 	return result, nil
 }
 
+func (d *Database) LoadUserBySteamId(ctx context.Context, steamId string) (*schema.UserSchema, error) {
+	log.Traceln("Database::LoadUserBySteamId:", steamId)
+
+	if d.db == nil {
+		return nil, fmt.Errorf("database is not initialized")
+	}
+
+	tx, err := d.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &schema.UserSchema{}
+	query := ``
+
+	err = tx.GetContext(ctx, &result, query, steamId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (d *Database) GetUserSessionByToken(ctx context.Context, token string) (*schema.UserSessionSchema, error) {
+	log.Traceln("Database::GetUserSessionByToken:", token)
 	if d.db == nil {
 		return nil, fmt.Errorf("db is nil")
 	}
