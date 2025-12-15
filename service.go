@@ -346,6 +346,7 @@ func (s *Service) HandleAuthPlatformRequest(ctx context.Context, in *restproto.R
 		}, nil
 	}
 
+	// We have only Steam for now
 	result, err := s.steam.AuthenticateTicket(ctx, credentials.Token)
 	if err != nil {
 		log.Errorf("Failed to authenticate: %v", err)
@@ -418,7 +419,7 @@ func (s *Service) HandleAuthPlatformRequest(ctx context.Context, in *restproto.R
 	}
 
 	// @TOOO: Properly determine user platform
-	session, err := u.InitializeSession(ctx, "web")
+	session, err := u.InitializeSession(ctx, "steam")
 	if err != nil {
 		log.Errorf("Failed to initialize session: %v", err)
 		return &restproto.RestApiResponse{

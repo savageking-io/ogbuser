@@ -150,3 +150,5 @@ func (c *Client) ValidateToken(ctx context.Context, token string) (bool, int32, 
 	}
 	return result.IsValid, result.UserId, nil
 }
+
+func (c *Client) GetUserById(id int32)
